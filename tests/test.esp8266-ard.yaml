@@ -1,0 +1,13 @@
+substitutions:
+  trigger_pin: GPIO4
+  pulse_pin: GPIO5
+  hook_pin: GPIO14
+
+esphome:
+  name: test-esp8266-ard
+
+esp8266:
+  board: d1_mini
+
+packages:
+  common: !include common.yaml

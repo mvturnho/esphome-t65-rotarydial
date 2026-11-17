@@ -1,0 +1,94 @@
+# Example: PTT T65 rotary phone with an ESP32.
+#
+# - The dial publishes every digit on the "Dial" sensor.
+# - When nothing is dialed for 3 seconds, the full number is published on the
+#   "Dialed number" text sensor (e.g. for use in Home Assistant automations).
+# - Lifting the handset or putting it back clears the number.
+
+substitutions:
+  name: t65-dial-phone
+  friendly_name: T65 Dial Phone
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source: github://mvturnho/esphome-t65-rotarydial@v1.0.0
+    components: [rotarydial]
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  actions:
+    - action: clear_number
+      then:
+        - rotarydial.clear_numbers: dial
+        - text_sensor.template.publish:
+            id: dialed_number
+            state: ""
+
+# Uses the API encryption key for OTA updates.
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+text_sensor:
+  - platform: template
+    id: dialed_number
+    name: Dialed number
+
+sensor:
+  - platform: rotarydial
+    id: dial
+    name: Dial
+    timeout: 3s
+    # Off-normal contact: closes to GND while the dial is turned.
+    trigger_pin:
+      number: GPIO17
+      mode:
+        input: true
+        pullup: true
+    # Pulse contact: opens once per pulse while the dial returns.
+    pulse_pin:
+      number: GPIO16
+      mode:
+        input: true
+        pullup: true
+    on_numbers:
+      then:
+        - text_sensor.template.publish:
+            id: dialed_number
+            state: !lambda "return x;"
+
+binary_sensor:
+  - platform: gpio
+    id: hook
+    name: Handset lifted
+    pin:
+      number: GPIO23
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+        - rotarydial.clear_numbers: dial
+        - text_sensor.template.publish:
+            id: dialed_number
+            state: "Pickup"
+    on_release:
+      then:
+        - rotarydial.clear_numbers: dial
+        - text_sensor.template.publish:
+            id: dialed_number
+            state: "Hangup"

@@ -1,0 +1,12 @@
+substitutions:
+  trigger_pin: "1"
+  pulse_pin: "2"
+  hook_pin: "3"
+
+esphome:
+  name: test-host
+
+host:
+
+packages:
+  common: !include common.yaml

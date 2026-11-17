@@ -1,0 +1,59 @@
+# Shared test configuration. Pins are provided per platform via substitutions.
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [rotarydial]
+
+logger:
+
+text_sensor:
+  - platform: template
+    id: dialed_number
+    name: Dialed number
+
+sensor:
+  - platform: rotarydial
+    id: rotarydial_id
+    name: Dial
+    timeout: 3s
+    trigger_pin:
+      number: ${trigger_pin}
+      mode:
+        input: true
+        pullup: true
+    pulse_pin:
+      number: ${pulse_pin}
+      mode:
+        input: true
+        pullup: true
+    on_value:
+      then:
+        - logger.log:
+            format: "Digit %.0f"
+            args: [x]
+    on_numbers:
+      then:
+        - text_sensor.template.publish:
+            id: dialed_number
+            state: !lambda "return x;"
+        - lambda: |-
+            ESP_LOGI("test", "Number %s (%u digits)", x.c_str(),
+                     (unsigned) id(rotarydial_id).get_numbers().size());
+
+binary_sensor:
+  - platform: gpio
+    id: hook
+    name: Hook
+    pin:
+      number: ${hook_pin}
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+        - rotarydial.clear_numbers: rotarydial_id
+    on_release:
+      then:
+        - rotarydial.clear_numbers:
+            id: rotarydial_id

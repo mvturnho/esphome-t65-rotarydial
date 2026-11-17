@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, to catch breaking changes in new ESPHome releases early.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.config }} (ESPHome ${{ matrix.esphome }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        esphome: ["2026.4.0", "latest"]
+        config: [esp32-ard, esp32-idf, esp8266-ard, host]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install ESPHome
+        run: |
+          if [ "${{ matrix.esphome }}" = "latest" ]; then
+            pip install esphome
+          else
+            pip install "esphome==${{ matrix.esphome }}"
+          fi
+          esphome version
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ matrix.config }}-${{ matrix.esphome }}-${{ hashFiles('tests/*.yaml') }}
+          restore-keys: pio-${{ matrix.config }}-${{ matrix.esphome }}-
+
+      - name: Validate configuration
+        run: esphome config tests/test.${{ matrix.config }}.yaml
+
+      - name: Compile
+        run: esphome compile tests/test.${{ matrix.config }}.yaml

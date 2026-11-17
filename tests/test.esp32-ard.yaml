@@ -1,0 +1,15 @@
+substitutions:
+  trigger_pin: GPIO17
+  pulse_pin: GPIO16
+  hook_pin: GPIO23
+
+esphome:
+  name: test-esp32-ard
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+packages:
+  common: !include common.yaml
